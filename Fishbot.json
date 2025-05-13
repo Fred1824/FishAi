@@ -1,0 +1,698 @@
+{
+"name": "Fishbot",
+"nodes": [
+{
+"parameters": {
+"updates": [
+"message"
+],
+"additionalFields": {}
+},
+"type": "n8n-nodes-base.telegramTrigger",
+"typeVersion": 1.1,
+"position": [
+-520,
+580
+],
+"id": "906ebb0c-9699-4f7e-816e-6357f785f006",
+"name": "Receive Message",
+"webhookId": "97ad91b8-8d3c-4c40-b197-bd5e509538ba",
+"credentials": {
+"telegramApi": {
+"id": "wrXF9oH0HB9ZX3uh",
+"name": "Telegram account 2"
+}
+}
+},
+{
+"parameters": {
+"options": {}
+},
+"type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+"typeVersion": 1.1,
+"position": [
+640,
+640
+],
+"id": "5fbdf34b-872b-4aad-b5b7-b48236419651",
+"name": "OpenAI Chat Model",
+"credentials": {
+"openAiApi": {
+"id": "ilpKhoFFVH7qjq7V",
+"name": "OpenAi account 4"
+}
+}
+},
+{
+"parameters": {
+"promptType": "define",
+"text": "={{ $json.text }}",
+"options": {
+"systemMessage": "=# ROLE\n Qui si mette il system prompt che verrà fornito all’ }
+},
+"type": "@n8n/n8n-nodes-langchain.agent",
+"typeVersion": 1.7,
+"position": [
+640,
+440
+
+],
+"id": "e64c7f3a-1307-48cf-a0f5-ea56c1951b14",
+"name": "AI Agent"
+},
+{
+"parameters": {
+"rules": {
+"values": [
+{
+"conditions": {
+"options": {
+"caseSensitive": true,
+"leftValue": "",
+"typeValidation": "strict",
+"version": 2
+},
+"conditions": [
+{
+"id": "f6d0a607-e0ad-49ba-9987-10ad2889b536",
+"leftValue": "={{ $json.message.photo }}",
+"rightValue": "",
+"operator": {
+"type": "array",
+"operation": "exists",
+"singleValue": true
+}
+}
+],
+"combinator": "and"
+},
+"renameOutput": true,
+"outputKey": "image"
+},
+{
+"conditions": {
+"options": {
+"caseSensitive": true,
+"leftValue": "",
+"typeValidation": "strict",
+"version": 2
+},
+"conditions": [
+{
+"id": "2a9d7a90-7f2e-4228-84df-6476a2534a04",
+"leftValue": "={{ $json.message.voice.file_id }}",
+"rightValue": "",
+"operator": {
+"type": "string",
+"operation": "exists",
+"singleValue": true
+}
+}
+],
+"combinator": "and"
+},
+"renameOutput": true,
+"outputKey": "voice"
+},
+{
+"conditions": {
+"options": {
+"caseSensitive": true,
+"leftValue": "",
+"typeValidation": "strict",
+"version": 2
+},
+"conditions": [
+{
+"leftValue": "={{ $json.message.text }}",
+"rightValue": "",
+
+"operator": {
+"type": "string",
+"operation": "exists",
+"singleValue": true
+}
+}
+],
+"combinator": "and"
+},
+"renameOutput": true,
+"outputKey": "text"
+}
+]
+},
+"options": {}
+},
+"type": "n8n-nodes-base.switch",
+"typeVersion": 3.2,
+"position": [
+-320,
+580
+],
+"id": "1e140c45-8532-4407-856f-2f922614c580",
+"name": "Switch"
+},
+{
+"parameters": {
+"resource": "file",
+"fileId": "={{ $json.message.voice.file_id }}"
+},
+"type": "n8n-nodes-base.telegram",
+"typeVersion": 1.2,
+"position": [
+80,
+380
+],
+"id": "de620a52-5ca8-48dc-ba86-48e3faabff84",
+"name": "Get Audio File",
+"webhookId": "b897f601-7c65-4006-a230-a39bf5564826",
+"credentials": {
+"telegramApi": {
+"id": "wrXF9oH0HB9ZX3uh",
+"name": "Telegram account 2"
+}
+}
+},
+{
+"parameters": {
+"sessionIdType": "customKey",
+"sessionKey": "={{ $('Receive Message').item.json.message.chat.id }}",
+"contextWindowLength": 20
+},
+"type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+"typeVersion": 1.3,
+"position": [
+780,
+680
+],
+"id": "c2da4bc3-21e4-4f01-83cb-1846975e275b",
+"name": "Window Buffer Memory"
+},
+{
+"parameters": {
+"resource": "image",
+"operation": "analyze",
+"modelId": {
+"__rl": true,
+"value": "chatgpt-4o-latest",
+"mode": "list",
+"cachedResultName": "CHATGPT-4O-LATEST"
+
+},
+"text": "={{ $('Receive Message').item.json.message.caption || \"Describe this image\" }}",
+"inputType": "base64",
+"options": {}
+},
+"type": "@n8n/n8n-nodes-langchain.openAi",
+"typeVersion": 1.8,
+"position": [
+420,
+60
+],
+"id": "fe1536de-2793-4d8f-b981-f122eacd882b",
+"name": "Analyze Image",
+"credentials": {
+"openAiApi": {
+"id": "ilpKhoFFVH7qjq7V",
+"name": "OpenAi account 4"
+}
+}
+},
+{
+"parameters": {
+"jsCode": "const inputItem = items[0];\nconst extension = inputItem.binary.data.fileExtension;\ninputItem.binary.data.mimeType =
+`image/${extension}`;\nreturn inputItem;"
+},
+"type": "n8n-nodes-base.code",
+"typeVersion": 2,
+"position": [
+260,
+60
+],
+"id": "c3b24a34-4d77-4671-b721-a87681fdabfe",
+"name": "Fix File Extension"
+},
+{
+"parameters": {
+"assignments": {
+"assignments": [
+{
+"id": "ec3a884f-480f-4462-9437-a7de0faed372",
+"name": "output",
+"value": "={{ $json.content }}",
+"type": "string"
+}
+]
+},
+"options": {}
+},
+"type": "n8n-nodes-base.set",
+"typeVersion": 3.4,
+"position": [
+580,
+60
+],
+"id": "4a3fbb68-e47b-4a7a-a83f-8c361f169aae",
+"name": "Format Output"
+},
+{
+"parameters": {
+"assignments": {
+"assignments": [
+{
+"id": "88cbdd27-f094-458b-878f-60504b8c3ad7",
+"name": "text",
+"value": "={{ $json.message.text }}",
+"type": "string"
+}
+]
+},
+"options": {}
+
+},
+"type": "n8n-nodes-base.set",
+"typeVersion": 3.4,
+"position": [
+80,
+640
+],
+"id": "271af9ec-5089-4c9a-a8b8-d4fdddd74fce",
+"name": "Agent Input"
+},
+{
+"parameters": {
+"conditions": {
+"options": {
+"caseSensitive": true,
+"leftValue": "",
+"typeValidation": "strict",
+"version": 2
+},
+"conditions": [
+{
+"id": "3d8b9900-fe93-48d3-a1cf-8fd70542f091",
+"leftValue": "={{ $('Receive Message').item.json.message.voice.file_id }}",
+"rightValue": "",
+"operator": {
+"type": "string",
+"operation": "exists",
+"singleValue": true
+}
+}
+],
+"combinator": "and"
+},
+"options": {}
+},
+"type": "n8n-nodes-base.if",
+"typeVersion": 2.2,
+"position": [
+1100,
+320
+],
+"id": "19240d22-cf43-41d7-a3f8-44f0451780a8",
+"name": "Audio Response?"
+},
+{
+"parameters": {
+"chatId": "={{ $('Receive Message').item.json.message.chat.id }}",
+"text": "={{ $json.output }}",
+"additionalFields": {
+"appendAttribution": false
+}
+},
+"type": "n8n-nodes-base.telegram",
+"typeVersion": 1.2,
+"position": [
+1340,
+440
+],
+"id": "21252785-3f4e-4c12-9e42-68f6d6f81379",
+"name": "Text Response",
+"webhookId": "f232dde1-4986-4e57-9aeb-63bc5a49270a",
+"credentials": {
+"telegramApi": {
+"id": "wrXF9oH0HB9ZX3uh",
+"name": "Telegram account 2"
+}
+}
+},
+{
+"parameters": {
+
+"resource": "audio",
+"input": "={{ $json.output }}",
+"voice": "nova",
+"options": {}
+},
+"type": "@n8n/n8n-nodes-langchain.openAi",
+"typeVersion": 1.8,
+"position": [
+1340,
+220
+],
+"id": "d7a69389-9809-4931-bc50-e47482706ea5",
+"name": "Generate Audio",
+"credentials": {
+"openAiApi": {
+"id": "ilpKhoFFVH7qjq7V",
+"name": "OpenAi account 4"
+}
+}
+},
+{
+"parameters": {
+"operation": "sendAudio",
+"chatId": "={{ $('Receive Message').item.json.message.chat.id }}",
+"binaryData": true,
+"additionalFields": {}
+},
+"type": "n8n-nodes-base.telegram",
+"typeVersion": 1.2,
+"position": [
+1560,
+220
+],
+"id": "752a3a29-d738-471a-a0a0-865230d994bb",
+"name": "Audio Response",
+"webhookId": "4309f4f5-3b08-41de-a764-b6c7d7b07e74",
+"credentials": {
+"telegramApi": {
+"id": "wrXF9oH0HB9ZX3uh",
+"name": "Telegram account 2"
+}
+}
+},
+{
+"parameters": {
+"resource": "file",
+"fileId": "={{ $json.message.photo[2].file_id }}"
+},
+"type": "n8n-nodes-base.telegram",
+"typeVersion": 1.2,
+"position": [
+80,
+60
+],
+"id": "0215c0fb-3688-408f-a4be-00a0498a5b77",
+"name": "Download Image",
+"webhookId": "c0de06c0-577e-4f4f-8859-fca4c17ebac6",
+"credentials": {
+"telegramApi": {
+"id": "wrXF9oH0HB9ZX3uh",
+"name": "Telegram account 2"
+}
+}
+},
+{
+"parameters": {
+"resource": "audio",
+"operation": "transcribe",
+"options": {}
+},
+
+"type": "@n8n/n8n-nodes-langchain.openAi",
+"typeVersion": 1.8,
+"position": [
+260,
+380
+],
+"id": "61fe3a54-30f3-4e7c-990a-6531c01b8e1c",
+"name": "Transcribe",
+"credentials": {
+"openAiApi": {
+"id": "ilpKhoFFVH7qjq7V",
+"name": "OpenAi account 4"
+}
+}
+},
+{
+"parameters": {
+"content": "## Image Chat",
+"height": 260,
+"width": 760
+},
+"type": "n8n-nodes-base.stickyNote",
+"typeVersion": 1,
+"position": [
+0,
+0
+],
+"id": "ead80d3f-9b97-44a9-a84b-ac6169192b83",
+"name": "Sticky Note1"
+},
+{
+"parameters": {
+"content": "## Voice Chat",
+"height": 240,
+"width": 540
+},
+"type": "n8n-nodes-base.stickyNote",
+"typeVersion": 1,
+"position": [
+0,
+320
+],
+"id": "01991786-6cf6-47aa-907b-f0629449bae2",
+"name": "Sticky Note2"
+},
+{
+"parameters": {
+"content": "## Text Chat",
+"height": 240,
+"width": 260
+},
+"type": "n8n-nodes-base.stickyNote",
+"typeVersion": 1,
+"position": [
+0,
+580
+],
+"id": "7bbd1bb5-3168-4cfa-9eaf-4d96454f0eb5",
+"name": "Sticky Note3"
+},
+{
+"parameters": {
+"content": "## Handle Responses",
+"height": 480,
+"width": 760
+},
+"type": "n8n-nodes-base.stickyNote",
+"typeVersion": 1,
+"position": [
+1020,
+
+160
+],
+"id": "0afcfbd1-2fc7-45a3-abd7-0e158d2e6868",
+"name": "Sticky Note4"
+},
+{
+"parameters": {
+"content": "## AI Agent",
+"height": 460,
+"width": 380
+},
+"type": "n8n-nodes-base.stickyNote",
+"typeVersion": 1,
+"position": [
+580,
+360
+],
+"id": "0798075f-846d-4126-a26d-3176f54eba93",
+"name": "Sticky Note5"
+}
+],
+"pinData": {},
+"connections": {
+"Receive Message": {
+"main": [
+[
+{
+"node": "Switch",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"OpenAI Chat Model": {
+"ai_languageModel": [
+[
+{
+"node": "AI Agent",
+"type": "ai_languageModel",
+"index": 0
+}
+]
+]
+},
+"Switch": {
+"main": [
+[
+{
+"node": "Download Image",
+"type": "main",
+"index": 0
+}
+],
+[
+{
+"node": "Get Audio File",
+"type": "main",
+"index": 0
+}
+],
+[
+{
+"node": "Agent Input",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+
+"Get Audio File": {
+"main": [
+[
+{
+"node": "Transcribe",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Window Buffer Memory": {
+"ai_memory": [
+[
+{
+"node": "AI Agent",
+"type": "ai_memory",
+"index": 0
+}
+]
+]
+},
+"AI Agent": {
+"main": [
+[
+{
+"node": "Audio Response?",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Fix File Extension": {
+"main": [
+[
+{
+"node": "Analyze Image",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Analyze Image": {
+"main": [
+[
+{
+"node": "Format Output",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Format Output": {
+"main": [
+[
+{
+"node": "Text Response",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Agent Input": {
+"main": [
+[
+{
+
+"node": "AI Agent",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Audio Response?": {
+"main": [
+[
+{
+"node": "Generate Audio",
+"type": "main",
+"index": 0
+}
+],
+[
+{
+"node": "Text Response",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Generate Audio": {
+"main": [
+[
+{
+"node": "Audio Response",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Download Image": {
+"main": [
+[
+{
+"node": "Fix File Extension",
+"type": "main",
+"index": 0
+}
+]
+]
+},
+"Transcribe": {
+"main": [
+[
+{
+"node": "AI Agent",
+"type": "main",
+"index": 0
+}
+]
+]
+}
+},
+"active": false,
+"settings": {
+"executionOrder": "v1"
+},
+"versionId": "9fc5ec43-2911-4a1d-a049-c943ea9b2544",
+"meta": {
+"templateCredsSetupCompleted": true,
+"instanceId": "e317d9b257954ca57addb120ac9bcb3d66b23682f80e8cebe34c2a1ed43bf1b9"
+},
+"id": "YatkUDGWD0DjBVfn",
+"tags": []
+
+}
